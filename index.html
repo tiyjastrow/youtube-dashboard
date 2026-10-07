@@ -670,7 +670,8 @@
 
         <p>
           This dashboard needs a free YouTube API key to fetch your playlists and videos. It's
-          completely free and takes just a few steps.
+          completely free and takes just a few steps. Enter your key once—it's saved locally in
+          your browser.
         </p>
 
         <div class="steps">
@@ -798,27 +799,31 @@
 
     <script>
       // Configuration
-      const STORAGE_KEY = "youtube-dashboard-settings";
       const API_KEY_STORAGE = "youtube-dashboard-api-key";
       const CHANNEL_STORAGE_KEY = "youtube-dashboard-channel-id";
-      const FEATURED_VIDEOS_STORAGE = "youtube-dashboard-featured-videos";
+      const EDIT_MODE_STORAGE = "youtube-dashboard-edit-mode";
 
       let apiKey = null;
       let currentChannelId = null;
       let channelInfo = null;
+      let isEditMode = false;
 
       // Initialize on page load
       window.addEventListener("load", () => {
-        // Load saved API key
-        apiKey = localStorage.getItem(API_KEY_STORAGE);
-        if (apiKey) {
-          document.getElementById("apiKeyInput").value = "••••••••••••••••••••••••";
-        }
-
-        // Load saved channel ID
+        // Check if user is in edit mode (has entered credentials before)
+        const savedEditMode = localStorage.getItem(EDIT_MODE_STORAGE);
+        const savedApiKey = localStorage.getItem(API_KEY_STORAGE);
         const savedChannelId = localStorage.getItem(CHANNEL_STORAGE_KEY);
-        if (savedChannelId && apiKey) {
+
+        // Only show setup if they explicitly entered edit mode, otherwise they're viewing
+        isEditMode = savedEditMode === "true";
+
+        if (savedApiKey && savedChannelId) {
+          apiKey = savedApiKey;
+          document.getElementById("apiKeyInput").value = "••••••••••••••••••••••••";
           document.getElementById("channelIdInput").value = savedChannelId;
+
+          // Auto-load if credentials are saved
           loadChannel(savedChannelId);
         }
 
@@ -834,6 +839,7 @@
           }
           if (channelId) {
             localStorage.setItem(CHANNEL_STORAGE_KEY, channelId);
+            localStorage.setItem(EDIT_MODE_STORAGE, "true");
             loadChannel(channelId);
           }
         });
@@ -849,6 +855,11 @@
             window.open(`https://www.youtube.com/channel/${currentChannelId}`, "_blank");
           }
         });
+
+        // Only show setup section in edit mode
+        if (!isEditMode && savedApiKey && savedChannelId) {
+          document.getElementById("setupSection").classList.add("hidden");
+        }
       });
 
       function saveApiKey() {
@@ -866,6 +877,7 @@
         }
 
         localStorage.setItem(API_KEY_STORAGE, key);
+        localStorage.setItem(EDIT_MODE_STORAGE, "true");
         apiKey = key;
         input.value = "••••••••••••••••••••••••";
         alert("✓ API key saved! Now enter your Channel ID below.");
@@ -873,7 +885,6 @@
 
       async function loadChannel(channelId) {
         currentChannelId = channelId;
-        document.getElementById("setupSection").classList.add("hidden");
         document.getElementById("contentSection").classList.remove("hidden");
         document.getElementById("loadingSection").classList.remove("hidden");
         document.getElementById("playlistsSection").classList.add("hidden");
@@ -913,6 +924,11 @@
 
           // Load playlists and videos
           await Promise.all([loadPlaylists(channelId), loadFeaturedVideos(channelId)]);
+
+          // Hide setup section once content is loaded (for public viewers)
+          if (!isEditMode) {
+            document.getElementById("setupSection").classList.add("hidden");
+          }
         } catch (error) {
           document.getElementById("loadingSection").classList.add("hidden");
           document.getElementById("playlistsSection").classList.add("hidden");
