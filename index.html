@@ -558,7 +558,9 @@
 
       async function loadChannel(channelId) {
         setLoading(true);
+        alert('after setLoading()');
         try {
+          alert('about to getChannelData(' + channelId + ')');
           const channel = await getChannelData(channelId);
           currentChannelId = channelId;
 
